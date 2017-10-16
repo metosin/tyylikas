@@ -2,10 +2,10 @@
 
 A linter for Clojure.
 
-> Adjective
-> **Tyylikäs**
-> tyyli + käs
-
+> Adjective<br>
+> **Tyylikäs**<br>
+> tyyli + käs<br>
+> 
 > 1. smart
 > 2. stylish
 > 3. elegant
