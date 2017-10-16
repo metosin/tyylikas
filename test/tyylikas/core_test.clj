@@ -7,13 +7,20 @@
 
 (deftest validate-test
   (let [node (p/parse-string "(ok\n  (foo(bar)))")]
-    (is (= [{:error :whitespace-between-nodes
-             :message "Missing whitespace between form elements"
+    (is (= [{:type :whitespace-between-nodes
              :this (-> node z/edn z/down z/right z/down z/right)}]
            (:errors (validate node {:rules all-rules}))))
 
     (is (= "(ok\n  (foo (bar)))"
-           (n/string (:node (validate node {:rules all-rules :fix true})))))))
+           (n/string (:node (validate node {:rules all-rules :fix true}))))))
+
+  (let [node (p/parse-string-all "(foo\n  1 2)\n(bar)")]
+    (is (= [{:type :line-break-between-top-level-forms
+             :this (-> node z/edn z/right)}]
+           (:errors (validate node {:rules all-rules}))))
+
+    (is (= "(foo\n  1 2)\n\n(bar)"
+           (n/string (:node (validate node {:rules all-rules :fix true})))))) )
 
 (deftest attach-location-test
   (let [node (p/parse-string "(ok\n  (foo(bar)))")
@@ -27,6 +34,6 @@
   (is (= "Missing whitespace between form elements, line 1, column 7:
   (foo(bar)))
       ^"
-         (format-error {:message "Missing whitespace between form elements"
+         (format-error {:type :whitespace-between-nodes
                         :position [1 7]
                         :line "  (foo(bar)))"}))))

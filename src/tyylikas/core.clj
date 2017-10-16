@@ -8,11 +8,12 @@
             [rewrite-clj.node.protocols :as np]))
 
 (defmulti rule (fn [type _ _ _] type))
+(defmulti message identity)
 
 (def ^:dynamic *errors* nil)
 
 (defn add-error [m]
-  (assert (keyword? (:error m)))
+  (assert (keyword? (:type m)))
   (assert (:this m))
   (swap! *errors* conj m))
 
@@ -44,15 +45,52 @@
 (defmethod rule :whitespace-between-nodes [type form rule-opts opts]
   (check form check-all missing-whitespace?
          (fn [zloc]
-           (add-error {:error type
-                       :message "Missing whitespace between form elements"
+           (add-error {:type type
                        :this (-> zloc z/right)})
            (if (:fix opts)
              (-> zloc (zip/insert-right (n/spaces 1)))
              zloc))))
 
+(defmethod message :whitespace-between-nodes [_]
+  "Missing whitespace between form elements")
+
+;;
+;; Missing newlines between multi-line toplevel forms
+;;
+
+(defn- check-childs [zloc p? f]
+  (loop [zloc (if (p? zloc) (f zloc) zloc)]
+    (if-let [zloc (z/find-next zloc zip/right p?)]
+      (recur (f zloc))
+      zloc)))
+
+(defn multi-line? [zloc]
+  (seq (rest (str/split-lines (z/string zloc)))))
+
+(defn- missing-line-break? [zloc]
+  (and (element? zloc)
+       ;; Separated by by less than 2 line-break?
+       (z/linebreak? (zip/right zloc))
+       (< (z/length (zip/right zloc)) 2)
+       (element? (zip/right (zip/right zloc)))
+       (or (multi-line? zloc)
+           (multi-line? (zip/right (zip/right zloc))))))
+
+(defmethod rule :line-break-between-top-level-forms [type form rule-opts opts]
+  (check form check-childs missing-line-break?
+         (fn [zloc]
+           (add-error {:type type
+                       :this (-> zloc z/right)})
+           (if (:fix opts)
+             (-> zloc (zip/insert-right (n/newlines 1)))
+             zloc))))
+
+(defmethod message :line-break-between-top-level-forms [_]
+   "Missing line break between toplevel forms")
+
 (def all-rules
-  {:whitespace-between-nodes true})
+  {:whitespace-between-nodes true
+   :line-break-between-top-level-forms true})
 
 (defn validate
   [node opts]
@@ -74,9 +112,9 @@
            :line (get (str/split-lines (n/string (z/root this))) (dec row))
            :position [(dec row) col])))
 
-(defn format-error [{:keys [line position message]}]
+(defn format-error [{:keys [line position type]}]
   (format "%s, line %d, column %s:\n%s\n%s^"
-          message
+          (message type)
           (first position)
           (second position)
           line
@@ -110,5 +148,7 @@
         (spit file (n/string node))))))
 
 (comment
-  (report (find-files "src" "test") {:rules all-rules :fix true})
+  (report (find-files "src" "test") {:rules all-rules})
+  (report (find-files "test-resources") {:rules all-rules})
+  (report (find-files "test-resources") {:rules all-rules :fix true})
   )
