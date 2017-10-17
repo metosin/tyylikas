@@ -10,3 +10,7 @@
 
 (defn top-level3 [b] b)
 (defn top-level4 [b] b)
+
+(js/console.log "foo")
+(.log js/console "foo")
+(println "foo")

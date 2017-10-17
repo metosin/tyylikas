@@ -122,10 +122,38 @@
 (defmethod message :line-break-between-top-level-forms [_]
    "Missing line break between toplevel forms")
 
+;;
+;; Check if there are calls to fobidden symbols
+;;
+
+(defmethod rule :forbidden-calls [type form rule-opts opts]
+  (assert (set? rule-opts) ":forbidden-calls value must be set of the forbidden symbols, or lists.")
+  (let [forbidden-symbol? (set (filter symbol? rule-opts))
+        forbidden-calls (set (filter list? rule-opts))]
+    (check form check-all (fn [zloc]
+                            (and (z/list? zloc)
+                                 (or (forbidden-symbol? (z/sexpr (z/down zloc)))
+                                     (some (fn [call]
+                                             (if (= (take (count call) (z/sexpr zloc))
+                                                    call)
+                                               true))
+                                           forbidden-calls))))
+           (fn [zloc]
+             (add-error {:type type
+                         :this zloc})
+             (if (:fix opts)
+               (-> zloc z/remove)
+               zloc)))))
+
+(defmethod message :forbidden-calls [_]
+  "Forbidden call")
+
 (def all-rules
   {:whitespace-between-nodes true
    :line-break-between-top-level-forms true
-   :bad-whitespace-start-end-of-list true})
+   :bad-whitespace-start-end-of-list true
+   ;; Needs set of symbols
+   :forbidden-calls nil})
 
 (defn validate
   [node opts]
@@ -186,5 +214,6 @@
 (comment
   (report (find-files "src" "test") {:rules all-rules})
   (report (find-files "test-resources") {:rules all-rules})
+  (report (find-files "test-resources") {:rules (assoc all-rules :forbidden-calls #{'println 'js/console.log '(.log js/console)})})
   (report (find-files "test-resources") {:rules all-rules :fix true})
   )
