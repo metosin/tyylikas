@@ -61,7 +61,9 @@
 (defn- start-of-list? [zloc]
   (not (zip/left zloc)))
 
-(defn- bad-whitespace? [zloc]
+(defn- bad-whitespace?
+  "Find lists where the first or rightmost item is whitespace."
+  [zloc]
   (and (z/list? zloc)
        (or (z/whitespace? (zip/down zloc))
            (z/whitespace? (zip/rightmost (zip/down zloc))))))
@@ -79,10 +81,10 @@
            (if (:fix opts)
              (cond-> zloc
                 (z/whitespace? (zip/down zloc))
-                (-> zip/down z/remove zip/up)
+                (z/edit-> zip/down z/remove)
 
                 (z/whitespace? (zip/rightmost (zip/down zloc)))
-                (-> zip/down zip/rightmost z/remove zip/up))
+                (z/edit-> zip/down zip/rightmost z/remove))
              zloc))))
 
 (defmethod message :bad-whitespace-start-end-of-list [_]
