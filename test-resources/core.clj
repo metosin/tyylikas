@@ -1,6 +1,7 @@
 (ns test-namespace)
 
 (missing-whitespace(foo(bar)))
+(bad-whitespace (   foo ( bar ))   )
 
 (defn top-level1 [a]
   a)

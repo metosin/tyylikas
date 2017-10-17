@@ -55,6 +55,40 @@
   "Missing whitespace between form elements")
 
 ;;
+;; Bad whitespace in start and end of list
+;;
+
+(defn- start-of-list? [zloc]
+  (not (zip/left zloc)))
+
+(defn- bad-whitespace? [zloc]
+  (and (z/list? zloc)
+       (or (z/whitespace? (zip/down zloc))
+           (z/whitespace? (zip/rightmost (zip/down zloc))))))
+
+(defmethod rule :bad-whitespace-start-end-of-list [type form rule-opts opts]
+  (check form check-all bad-whitespace?
+         (fn [zloc]
+           (when (z/whitespace? (zip/down zloc))
+             (add-error {:type type
+                         :this (zip/down zloc)}))
+
+           (when (z/whitespace? (zip/rightmost (zip/down zloc)))
+             (add-error {:type type
+                         :this (zip/rightmost (zip/down zloc))}))
+           (if (:fix opts)
+             (cond-> zloc
+                (z/whitespace? (zip/down zloc))
+                (-> zip/down z/remove zip/up)
+
+                (z/whitespace? (zip/rightmost (zip/down zloc)))
+                (-> zip/down zip/rightmost z/remove zip/up))
+             zloc))))
+
+(defmethod message :bad-whitespace-start-end-of-list [_]
+  "Bad whitespace on start or end of a list")
+
+;;
 ;; Missing newlines between multi-line toplevel forms
 ;;
 
@@ -90,7 +124,8 @@
 
 (def all-rules
   {:whitespace-between-nodes true
-   :line-break-between-top-level-forms true})
+   :line-break-between-top-level-forms true
+   :bad-whitespace-start-end-of-list true})
 
 (defn validate
   [node opts]
@@ -136,13 +171,14 @@
           files))
 
 (defn report [fs opts]
-  (let [results (check-files fs opts)]
+  (let [results (sort-by :file (check-files fs opts))]
     (println (format "Found %d problems:\n" (count (mapcat :errors results))))
     (doseq [{:keys [file errors node]} results
-            :when (seq errors)]
+            :when (seq errors)
+            :let [errors (sort-by :position (map attach-location errors))]]
       (println (str (.getPath file) ":\n"))
       (doseq [error errors]
-        (println (format-error (attach-location error)))
+        (println (format-error error))
         (println))
       (when (:fix opts)
         (spit file (n/string node))))))
