@@ -5,7 +5,7 @@ A linter for Clojure.
 > Adjective<br>
 > **Tyylikäs**<br>
 > tyyli + käs<br>
-> 
+>
 > 1. smart
 > 2. stylish
 > 3. elegant
@@ -23,6 +23,43 @@ and to fix their editor configuration etc.
 ## Usage
 
 FIXME
+
+
+## Example
+
+```
+Found 7 problems:
+
+test-resources/core.clj:
+
+Missing whitespace between form elements, line 2, column 20:
+(missing-whitespace(foo(bar)))
+                   ^
+
+Missing whitespace between form elements, line 2, column 24:
+(missing-whitespace(foo(bar)))
+                       ^
+
+Bad whitespace on start or end of a list, line 3, column 18:
+(bad-whitespace (   foo ( bar ))   )
+                 ^
+
+Bad whitespace on start or end of a list, line 3, column 26:
+(bad-whitespace (   foo ( bar ))   )
+                         ^
+
+Bad whitespace on start or end of a list, line 3, column 30:
+(bad-whitespace (   foo ( bar ))   )
+                             ^
+
+Bad whitespace on start or end of a list, line 3, column 33:
+(bad-whitespace (   foo ( bar ))   )
+                                ^
+
+Missing line break between toplevel forms, line 7, column 1:
+(defn top-level2 [b]
+^
+```
 
 ## License
 
